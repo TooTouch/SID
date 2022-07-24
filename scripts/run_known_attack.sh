@@ -1,17 +1,11 @@
-cd ..
+model_list="resnet34"
+adv_method_list="FGSM BIM DeepFool CW"
 
-modelname=$1
-adv_method=$2
-
-python known_attack.py \
---savedir ./known_attack_results \
---exp-name ${modelname}/${adv_method} \
---modelname $modelname \
---dataname CIFAR10 \
---batch-size 64 \
---save_bucket_path ./saved_adv_samples/${modelname}/${adv_method}/successed_images.pkl \
---model_checkpoint ./saved_model/${modelname}/${modelname}.pt \
---model_dwt_checkpoint ./saved_model/${modelname}_dwt/${modelname}_dwt.pt
-
-
-
+for modelname in $model_list
+do 
+    for adv_method in $adv_method_list
+    do
+        echo "$modelname - $adv_method"
+        bash known_attack.sh $modelname $adv_method
+    done
+done
