@@ -18,6 +18,11 @@ both logits <-> both targets
 only logits <-> only targets
 
 
+[train detector]
+1. use concatenated model logits & model dwt logits as inputs
+2. train detector
+3. evaluate
+
 """
 
 import logging
@@ -38,7 +43,7 @@ from models import create_model
 from utils import torch_seed, AverageMeter
 from metrics import get_auroc
 
-_logger = logging.getLogger('adv sample')
+_logger = logging.getLogger('known attack')
 
 
 
@@ -164,6 +169,8 @@ def get_logits(model, model_dwt, images, targets, batch_size, train_ratio, seed,
 
 
 def get_stack_logits(model, model_dwt, save_path, batch_size, train_ratio, seed, savedir, device='cpu'):
+
+    # if os.os.path.join(savedir, 'train.pt')
     bucket = pickle.load(open(save_path, 'rb'))
 
     clean_train_logits, clean_test_logits = get_logits(
@@ -268,15 +275,15 @@ def save_logits(clean_logits: list, noise_logits: list, adv_logits: list, savedi
     return train_logits, train_labels, test_logits, test_labels
 
 
-def train(model, dataloader, criterion, optimizer, log_interval, savedir, device='cpu'):   
-    open(os.path.join(savedir, 'confidence_TMP_In.txt'), 'w').close()
-    open(os.path.join(savedir, 'confidence_TMP_Out.txt'), 'w').close()
-
+def train(model, dataloader, criterion, optimizer, log_interval=-1, verbose=True, device='cpu'):   
     batch_time_m = AverageMeter()
     data_time_m = AverageMeter()
     acc_m = AverageMeter()
     losses_m = AverageMeter()
     
+    outputs_total = torch.Tensor([])
+    targets_total = torch.Tensor([])
+
     end = time.time()
     
     model.train()
@@ -302,40 +309,49 @@ def train(model, dataloader, criterion, optimizer, log_interval, savedir, device
         preds = outputs.argmax(dim=1) 
         acc_m.update(targets.eq(preds).sum().item()/targets.size(0), n=targets.size(0))
 
-        # auroc
-        results = get_auroc(outputs, targets, savedir)
-        auroc = results['TMP']['AUROC']
+        # stack outputs and targets
+        outputs_total = torch.cat([outputs_total, outputs.detach().cpu()], dim=0)
+        targets_total = torch.cat([targets_total, targets.detach().cpu()], dim=0)
 
         batch_time_m.update(time.time() - end)
     
-        if idx % log_interval == 0 and idx != 0: 
+        if (idx % log_interval == 0 and idx != 0) and verbose: 
             _logger.info('TRAIN [{:>4d}/{}] Loss: {loss.val:>6.4f} ({loss.avg:>6.4f}) '
-                    'AUROC: {auroc:.4f}  '
-                    'Acc: {acc.avg:.3%} '
-                    'LR: {lr:.3e} '
-                    'Time: {batch_time.val:.3f}s, {rate:>7.2f}/s ({batch_time.avg:.3f}s, {rate_avg:>7.2f}/s) '
-                    'Data: {data_time.val:.3f} ({data_time.avg:.3f})'.format(
-                    idx+1, len(dataloader), 
-                    loss       = losses_m, 
-                    auroc      = auroc,
-                    acc        = acc_m, 
-                    lr         = optimizer.param_groups[0]['lr'],
-                    batch_time = batch_time_m,
-                    rate       = inputs.size(0) / batch_time_m.val,
-                    rate_avg   = inputs.size(0) / batch_time_m.avg,
-                    data_time  = data_time_m))
+                         'Acc: {acc.avg:.3%} '
+                         'LR: {lr:.3e} '
+                         'Time: {batch_time.val:.3f}s, {rate:>7.2f}/s ({batch_time.avg:.3f}s, {rate_avg:>7.2f}/s) '
+                         'Data: {data_time.val:.3f} ({data_time.avg:.3f})'.format(
+                         idx+1, len(dataloader), 
+                         loss       = losses_m, 
+                         acc        = acc_m, 
+                         lr         = optimizer.param_groups[0]['lr'],
+                         batch_time = batch_time_m,
+                         rate       = inputs.size(0) / batch_time_m.val,
+                         rate_avg   = inputs.size(0) / batch_time_m.avg,
+                         data_time  = data_time_m))
    
         end = time.time()
 
-        
-def test(model, dataloader, criterion, log_interval, savedir, device='cpu'):
-    open(os.path.join(savedir, 'confidence_TMP_In.txt'), 'w').close()
-    open(os.path.join(savedir, 'confidence_TMP_Out.txt'), 'w').close()
+    # auroc
+    results = get_auroc(outputs_total, targets_total)
+    auroc = results['AUROC']
 
+    _logger.info('TRAIN [FINAL] Loss: {loss.val:>6.4f} ({loss.avg:>6.4f}) '
+                 'AUROC: {auroc:.4f}  '
+                 'Acc: {acc.avg:.3%}'.format(
+                 loss       = losses_m, 
+                 auroc      = auroc,
+                 acc        = acc_m))
+
+        
+def test(model, dataloader, criterion, log_interval=-1, verbose=True, device='cpu'):
     correct = 0
     total = 0
     total_loss = 0
     
+    outputs_total = torch.Tensor([])
+    targets_total = torch.Tensor([])
+
     model.eval()
     with torch.no_grad():
         for idx, (inputs, targets) in enumerate(dataloader):
@@ -346,10 +362,6 @@ def test(model, dataloader, criterion, log_interval, savedir, device='cpu'):
             
             # loss 
             loss = criterion(outputs, targets)
-
-            # auroc
-            results = get_auroc(outputs, targets, savedir)
-            auroc = results['TMP']['AUROC']
             
             # total loss and acc
             total_loss += loss.item()
@@ -357,10 +369,20 @@ def test(model, dataloader, criterion, log_interval, savedir, device='cpu'):
             correct += targets.eq(preds).sum().item()
             total += targets.size(0)
             
-            if idx % log_interval == 0 and idx != 0: 
-                _logger.info('TEST [%d/%d]: Loss: %.3f | AUROC: %.3f | Acc: %.3f%% [%d/%d]' % 
-                            (idx+1, len(dataloader), total_loss/(idx+1), auroc, 100.*correct/total, correct, total))
-                
+            # stack outputs and targets
+            outputs_total = torch.cat([outputs_total, outputs.detach().cpu()], dim=0)
+            targets_total = torch.cat([targets_total, targets.detach().cpu()], dim=0)
+
+            if (idx % log_interval == 0 and idx != 0) and verbose: 
+                _logger.info('TEST [%d/%d]: Loss: %.3f | Acc: %.3f%% [%d/%d]' % 
+                            (idx+1, len(dataloader), total_loss/(idx+1), 100.*correct/total, correct, total))
+
+    # auroc
+    results = get_auroc(outputs_total, targets_total)
+    auroc = results['AUROC']
+    _logger.info('TEST [FIENAL]: Loss: %.3f | AUROC: %.3f | Acc: %.3f%% [%d/%d]' % 
+                (total_loss/(idx+1), auroc, 100.*correct/total, correct, total))
+        
     return results
 
 
@@ -408,26 +430,27 @@ def train_detector(
         weight_decay = 5e-3
     )
 
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, [40,50,60,70], gamma=1.1, last_epoch=-1)
+    # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, [40,50,60,70], gamma=1.1, last_epoch=-1)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
 
     # train and test
     best_auroc = 0
     for epoch in range(epochs):
         _logger.info(f'\nEpoch: {epoch+1}/{epochs}')
         
-        scheduler.step()
-        train(detector, trainloader, criterion, optimizer, log_interval, savedir, device)
-        results = test(detector, testloader, criterion, log_interval, savedir, device)
+        train(detector, trainloader, criterion, optimizer, log_interval, True, device)
+        results = test(detector, testloader, criterion, log_interval, True, device)
 
-        auroc = results['TMP']['AUROC']
+        auroc = results['AUROC']
         if auroc > best_auroc:
             best_auroc = auroc
 
             state = {'best_epoch':epoch}
-            state.update(results['TMP'])
+            state.update(results)
             json.dump(state, open(os.path.join(savedir, 'result.json'), 'w'), indent=4)
             torch.save(detector.state_dict(), os.path.join(savedir, 'detector.pt'))
 
+        scheduler.step()
 
 
 def run(args):
@@ -501,7 +524,6 @@ if __name__=='__main__':
     # training
     parser.add_argument('--epochs',type=int,default=100,help='the number of epochs')
     parser.add_argument('--batch-size',type=int,default=128,help='batch size')
-    parser.add_argument('--num-workers',type=int,default=8,help='the number of workers (threads)')
     parser.add_argument('--log-interval',type=int,default=10,help='log interval')
     parser.add_argument('--train_ratio',type=float,default=0.6,help='train ratio')
     parser.add_argument('--seed',type=int,default=223,help='223 is my birthday')

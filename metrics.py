@@ -6,129 +6,108 @@ import torch
 import numpy as np
 
 
-def get_curve(dir_name, stypes = ['Baseline', 'Gaussian_LDA']):
-    tp, fp = dict(), dict()
-    tnr_at_tpr95 = dict()
-    for stype in stypes:
-        known = np.loadtxt('{}/confidence_{}_In.txt'.format(dir_name, stype), delimiter='\n')
-        novel = np.loadtxt('{}/confidence_{}_Out.txt'.format(dir_name, stype), delimiter='\n')
-        known.sort()
-        novel.sort()
+def get_curve(known, novel):
+    known.sort()
+    novel.sort()
 
-        num_k = known.shape[0]
-        num_n = novel.shape[0]
-        tp[stype] = -np.ones([num_k+num_n+1], dtype=int)
-        fp[stype] = -np.ones([num_k+num_n+1], dtype=int)
-        tp[stype][0], fp[stype][0] = num_k, num_n
-        k, n = 0, 0
-        for l in range(num_k+num_n):
-            if k == num_k:
-                tp[stype][l+1:] = tp[stype][l]
-                fp[stype][l+1:] = np.arange(fp[stype][l]-1, -1, -1)
-                break
-            elif n == num_n:
-                tp[stype][l+1:] = np.arange(tp[stype][l]-1, -1, -1)
-                fp[stype][l+1:] = fp[stype][l]
-                break
+    num_k = known.shape[0]
+    num_n = novel.shape[0]
+    tp = -np.ones([num_k+num_n+1], dtype=int)
+    fp = -np.ones([num_k+num_n+1], dtype=int)
+    tp[0], fp[0] = num_k, num_n
+    k, n = 0, 0
+    for l in range(num_k+num_n):
+        if k == num_k:
+            tp[l+1:] = tp[l]
+            fp[l+1:] = np.arange(fp[l]-1, -1, -1)
+            break
+        elif n == num_n:
+            tp[l+1:] = np.arange(tp[l]-1, -1, -1)
+            fp[l+1:] = fp[l]
+            break
+        else:
+            if novel[n] < known[k]:
+                n += 1
+                tp[l+1] = tp[l]
+                fp[l+1] = fp[l] - 1
             else:
-                if novel[n] < known[k]:
-                    n += 1
-                    tp[stype][l+1] = tp[stype][l]
-                    fp[stype][l+1] = fp[stype][l] - 1
-                else:
-                    k += 1
-                    tp[stype][l+1] = tp[stype][l] - 1
-                    fp[stype][l+1] = fp[stype][l]
-        tpr95_pos = np.abs(tp[stype] / num_k - .95).argmin()
-        tnr_at_tpr95[stype] = 1. - fp[stype][tpr95_pos] / num_n
+                k += 1
+                tp[l+1] = tp[l] - 1
+                fp[l+1] = fp[l]
+    tpr95_pos = np.abs(tp / num_k - .95).argmin()
+    tnr_at_tpr95 = 1. - fp[tpr95_pos] / num_n
+
     return tp, fp, tnr_at_tpr95
 
-def metric(dir_name, stypes = ['Bas', 'Gau'], verbose=False):
-    tp, fp, tnr_at_tpr95 = get_curve(dir_name, stypes)
+def metric(known, novel, verbose=False):
+    tp, fp, tnr_at_tpr95 = get_curve(known, novel)
     results = dict()
-    mtypes = ['TNR', 'AUROC', 'DTACC', 'AUIN', 'AUOUT']
+
+    # TNR
+    mtype = 'TNR'
+    results[mtype] = tnr_at_tpr95
     if verbose:
-        print('      ', end='')
-        for mtype in mtypes:
-            print(' {mtype:6s}'.format(mtype=mtype), end='')
+        print(' {val:6.3f}'.format(val=100.*results[mtype]), end='')
+    
+    # AUROC
+    mtype = 'AUROC'
+    tpr = np.concatenate([[1.], tp/tp[0], [0.]])
+    fpr = np.concatenate([[1.], fp/fp[0], [0.]])
+    results[mtype] = -np.trapz(1.-fpr, tpr)
+    if verbose:
+        print(' {val:6.3f}'.format(val=100.*results[mtype]), end='')
+    
+    # DTACC
+    mtype = 'DTACC'
+    results[mtype] = .5 * (tp/tp[0] + 1.-fp/fp[0]).max()
+    if verbose:
+        print(' {val:6.3f}'.format(val=100.*results[mtype]), end='')
+    
+    # AUIN
+    mtype = 'AUIN'
+    denom = tp+fp
+    denom[denom == 0.] = -1.
+    pin_ind = np.concatenate([[True], denom > 0., [True]])
+    pin = np.concatenate([[.5], tp/denom, [0.]])
+    results[mtype] = -np.trapz(pin[pin_ind], tpr[pin_ind])
+    if verbose:
+        print(' {val:6.3f}'.format(val=100.*results[mtype]), end='')
+    
+    # AUOUT
+    mtype = 'AUOUT'
+    denom = tp[0]-tp+fp[0]-fp
+    denom[denom == 0.] = -1.
+    pout_ind = np.concatenate([[True], denom > 0., [True]])
+    pout = np.concatenate([[0.], (fp[0]-fp)/denom, [.5]])
+    results[mtype] = np.trapz(pout[pout_ind], 1.-fpr[pout_ind])
+
+    if verbose:
+        print(' {val:6.3f}'.format(val=100.*results[mtype]), end='')
         print('')
-        
-    for stype in stypes:
-        if verbose:
-            print('{stype:5s} '.format(stype=stype), end='')
-        results[stype] = dict()
-        
-        # TNR
-        mtype = 'TNR'
-        results[stype][mtype] = tnr_at_tpr95[stype]
-        if verbose:
-            print(' {val:6.3f}'.format(val=100.*results[stype][mtype]), end='')
-        
-        # AUROC
-        mtype = 'AUROC'
-        tpr = np.concatenate([[1.], tp[stype]/tp[stype][0], [0.]])
-        fpr = np.concatenate([[1.], fp[stype]/fp[stype][0], [0.]])
-        results[stype][mtype] = -np.trapz(1.-fpr, tpr)
-        if verbose:
-            print(' {val:6.3f}'.format(val=100.*results[stype][mtype]), end='')
-        
-        # DTACC
-        mtype = 'DTACC'
-        results[stype][mtype] = .5 * (tp[stype]/tp[stype][0] + 1.-fp[stype]/fp[stype][0]).max()
-        if verbose:
-            print(' {val:6.3f}'.format(val=100.*results[stype][mtype]), end='')
-        
-        # AUIN
-        mtype = 'AUIN'
-        denom = tp[stype]+fp[stype]
-        denom[denom == 0.] = -1.
-        pin_ind = np.concatenate([[True], denom > 0., [True]])
-        pin = np.concatenate([[.5], tp[stype]/denom, [0.]])
-        results[stype][mtype] = -np.trapz(pin[pin_ind], tpr[pin_ind])
-        if verbose:
-            print(' {val:6.3f}'.format(val=100.*results[stype][mtype]), end='')
-        
-        # AUOUT
-        mtype = 'AUOUT'
-        denom = tp[stype][0]-tp[stype]+fp[stype][0]-fp[stype]
-        denom[denom == 0.] = -1.
-        pout_ind = np.concatenate([[True], denom > 0., [True]])
-        pout = np.concatenate([[0.], (fp[stype][0]-fp[stype])/denom, [.5]])
-        results[stype][mtype] = np.trapz(pout[pout_ind], 1.-fpr[pout_ind])
-        if verbose:
-            print(' {val:6.3f}'.format(val=100.*results[stype][mtype]), end='')
-            print('')
     
     return results
 
-def get_auroc(output,target_var,SaveDir):
+def get_auroc(outputs, targets):
+    """
+    0 (consistency), 1 (inconsistency) -> 0
+    2 (adversarial examples) -> 1
+    """
 
+    Bioutput = torch.zeros([outputs.shape[0], 2])
+    Bioutput[:, 0] = torch.max(outputs[:, 0:2], 1)[0]
+    Bioutput[:, 1] = outputs[:, 2]
 
-    Bioutput = torch.zeros([output.shape[0], 2])
-    Bioutput[:, 0] = torch.max(output[:, 0:2], 1)[0]
-    Bioutput[:, 1] = output[:, 2]
-
-    target_var[np.nonzero(target_var.cpu().numpy() == 1)] = 0
-    target_var[np.nonzero(target_var.cpu().numpy() == 2)] = 1
+    targets[np.nonzero(targets.cpu().numpy() == 1)] = 0
+    targets[np.nonzero(targets.cpu().numpy() == 2)] = 1
 
     Bioutput = torch.nn.Softmax(dim=1)(Bioutput)
 
     y_pred = Bioutput.detach().cpu().numpy().astype(np.float64)[:, 1]
-    Y = target_var.detach().cpu().numpy().astype(np.float64)
+    Y = targets.detach().cpu().numpy().astype(np.float64)
 
-    num_samples = Y.shape[0]
+    # TODO: why negative?
+    known = -y_pred[np.where(Y==0)]
+    novel = -y_pred[np.where(Y==1)]
 
-    l1 = open('%s/confidence_TMP_In.txt' % SaveDir, 'a')
-    l2 = open('%s/confidence_TMP_Out.txt' % SaveDir, 'a')
-
-    for i in range(num_samples):
-        if Y[i] == 0:
-            l1.write("{}\n".format(-y_pred[i]))
-        else:
-            l2.write("{}\n".format(-y_pred[i]))
-
-    l1.flush()
-    l2.flush()
-
-    results = metric(SaveDir, ['TMP'])
+    results = metric(known, novel)
     return results
