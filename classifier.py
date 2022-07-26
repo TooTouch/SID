@@ -130,6 +130,7 @@ def fit(
 
             best_acc = eval_metrics['acc']
 
+
     _logger.info('Best Metric: {0:.3%} (epoch {1:})'.format(state['best_acc'], state['best_epoch']))
 
 
@@ -157,16 +158,22 @@ def run(args):
     )
     
     # Build Model
-    model = create_model(args.modelname, num_classes=args.num_classes, use_wavelet_transform=args.use_wavelet_transform)
+    model = create_model(
+        modelname             = args.modelname, 
+        num_classes           = args.num_classes, 
+        use_wavelet_transform = args.use_wavelet_transform,
+        checkpoint            = args.checkpoint
+    )
     model.to(device)
     _logger.info('# of params: {}'.format(np.sum([p.numel() for p in model.parameters()])))
 
     # Set training
     criterion = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
+    optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
 
     # scheduler
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[100,200,250], gamma=0.1)
+    # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
 
     # Fitting model
     fit(exp_name     = args.exp_name,
@@ -187,6 +194,7 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp-name',type=str,help='experiment name')
     parser.add_argument('--modelname',type=str,choices=['vgg19','resnet34'])
+    parser.add_argument('--checkpoint',type=str,help='model checkpoint')
 
     # dataset
     parser.add_argument('--datadir',type=str,default='/datasets',help='data directory')
@@ -195,7 +203,7 @@ if __name__=='__main__':
     parser.add_argument('--num_classes',type=int,default=10,help='the number of classes')
 
     # training
-    parser.add_argument('--epochs',type=int,default=100,help='the number of epochs')
+    parser.add_argument('--epochs',type=int,default=300,help='the number of epochs')
     parser.add_argument('--lr',type=float,default=0.1,help='learning_rate')
     parser.add_argument('--batch-size',type=int,default=128,help='batch size')
     parser.add_argument('--num-workers',type=int,default=8,help='the number of workers (threads)')

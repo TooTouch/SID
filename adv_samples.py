@@ -21,18 +21,10 @@ from dataloader import create_dataloader
 from log import setup_default_logging
 from models import create_model
 from utils import torch_seed, AverageMeter, extract_correct
+from adv_attacks import adv_attack
+
 
 _logger = logging.getLogger('adv sample')
-
-
-def adv_attack(model, adv_method, adv_params):
-    for k in ['eps','alpha']:
-        if k in adv_params.keys():
-            adv_params[k] = eval(adv_params[k])
-
-    atk = __import__('torchattacks').__dict__[adv_method](model=model, **adv_params)
-
-    return atk
 
 
 def make_bucket():
@@ -173,7 +165,7 @@ def run(args):
     os.makedirs(savedir, exist_ok=True)
 
     # load adversarial parameteres and update arguments
-    adv_params = json.load(open(os.path.join(args.adv_config, f'{args.adv_method.lower()}.json'),'r'))
+    adv_params = json.load(open(os.path.join(args.adv_config, f'{args.adv_name.lower()}.json'),'r'))
     vars(args).update(adv_params)
 
     # save argsvars
@@ -223,6 +215,7 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp-name',type=str,help='experiment name')
     parser.add_argument('--modelname',type=str,choices=['vgg19','resnet34'])
+    parser.add_argument('--adv_name',type=str,help='adversrial experiments name')
 
     # checkpoint
     parser.add_argument('--model_checkpoint',type=str,help='model checkpoint path')
