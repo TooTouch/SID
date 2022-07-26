@@ -1,0 +1,6 @@
+{
+    "eps":"1/255",
+    "alpha":"2/255",
+    "steps":10,
+    "random_start":true
+}

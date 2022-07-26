@@ -1,0 +1,5 @@
+{
+    "weight":1.0,
+    "loss_str":"l2",
+    "crop_frac":1.0
+}

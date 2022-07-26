@@ -1,0 +1,5 @@
+{
+    "num_classes":10,
+    "train_mode":false,
+    "step_size":"38.25/255"
+}
