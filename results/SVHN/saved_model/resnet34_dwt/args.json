@@ -1,0 +1,17 @@
+{
+    "exp_name": "resnet34_dwt",
+    "modelname": "resnet34",
+    "checkpoint": null,
+    "datadir": "/datasets",
+    "savedir": "./results/SVHN/saved_model",
+    "dataname": "SVHN",
+    "num_classes": 10,
+    "epochs": 300,
+    "lr": 0.1,
+    "batch_size": 128,
+    "num_workers": 8,
+    "log_interval": 10,
+    "seed": 223,
+    "use_wavelet_transform": true,
+    "use_wandb": false
+}
