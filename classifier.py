@@ -124,7 +124,7 @@ def fit(
             state = {'best_epoch':epoch, 'best_acc':eval_metrics['acc']}
             json.dump(state, open(os.path.join(savedir, f'{exp_name}.json'),'w'), indent=4)
 
-            torch.save(model.state_dict(), os.path.join(savedir, f'{exp_name}.pt'))
+            torch.save(model.model.state_dict(), os.path.join(savedir, f'{exp_name}.pt'))
             
             _logger.info('Best Accuracy {0:.3%} to {1:.3%}'.format(best_acc, eval_metrics['acc']))
 
