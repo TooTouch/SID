@@ -1,5 +1,5 @@
 model_list="resnet34"
-adv_method_list="FGSM BIM DeepFool CW"
+adv_method_list="DeepFool"
 
 for modelname in $model_list
 do 
