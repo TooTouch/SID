@@ -3,6 +3,15 @@ cd ..
 modelname=$1
 dataname=$2
 
+
+python classifier.py \
+--exp-name ${modelname} \
+--modelname $modelname \
+--dataname $dataname \
+--savedir ./results/${dataname}/saved_model 
+
+
+# DWT
 python classifier.py \
 --exp-name ${modelname}_dwt \
 --modelname $modelname \
