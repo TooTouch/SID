@@ -1,3 +1,4 @@
-**Author**: Tootouch (Jaehyuk Heo)
+# Detecting Adversarial Examples from Sensitivity Inconsistency of Spatial-Transform Domain
 
-# Gradient Accumulation
+Pytorch re-implementation for "Detecting Adversarial Examples from Sensitivity Inconsistency of Spatial-Transform Domain".
+
