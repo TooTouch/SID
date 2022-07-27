@@ -43,6 +43,9 @@ def create_model(modelname, num_classes=10, use_wavelet_transform=False, checkpo
         model = Normalize(model)
 
     if checkpoint:
-        model.model.load_state_dict(torch.load(checkpoint))
+        if modelname != 'detector':
+            model.model.load_state_dict(torch.load(checkpoint))
+        else:
+            model.load_state_dict(torch.load(checkpoint))
 
     return model
