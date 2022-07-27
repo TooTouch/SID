@@ -222,7 +222,7 @@ if __name__=='__main__':
     parser.add_argument('--model_dwt_checkpoint',type=str,help='dwt model checkpoint path')
 
     # adv
-    parser.add_argument('--adv_method',type=str,choices=['BIM','DeepFool','CW','FGSM'],help='adversarial attack method name')
+    parser.add_argument('--adv_method',type=str,help='adversarial attack method name')
     parser.add_argument('--adv_config',type=str,default='./configs_adv',help='adversarial attack configuration directory')
     parser.add_argument('--noise_size',type=float,default=0.01,help='noise size')
 
