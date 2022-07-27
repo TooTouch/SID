@@ -18,8 +18,12 @@ def create_dataloader(datadir, dataname, batch_size, num_workers):
 
     load_dataset = __import__('torchvision.datasets', fromlist=dataname)
 
-    trainset = load_dataset.__dict__[dataname](os.path.join(datadir,dataname), train=True, download=True, transform=transform_train)
-    testset = load_dataset.__dict__[dataname](os.path.join(datadir,dataname), train=False, download=True, transform=transform_test)
+    if dataname == 'SVHN':
+        trainset = load_dataset.__dict__[dataname](os.path.join(datadir,dataname), split='train', download=True, transform=transform_train)
+        testset = load_dataset.__dict__[dataname](os.path.join(datadir,dataname), split='test', download=True, transform=transform_test)
+    else:
+        trainset = load_dataset.__dict__[dataname](os.path.join(datadir,dataname), train=True, download=True, transform=transform_train)
+        testset = load_dataset.__dict__[dataname](os.path.join(datadir,dataname), train=False, download=True, transform=transform_test)
 
     trainloader = DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     testloader = DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=num_workers)

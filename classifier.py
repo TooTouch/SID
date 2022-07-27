@@ -103,35 +103,44 @@ def fit(
     savedir, log_interval, use_wandb, device='cpu'
 ):
     
-    best_acc = 0
+    save_model_path = os.path.join(savedir, f'{exp_name}.pt')
 
-    for epoch in range(epochs):
-        _logger.info(f'\nEpoch: {epoch+1}/{epochs}')
-        train_metrics = train(model, trainloader, criterion, optimizer, log_interval, device)
+    if not os.path.isfile(save_model_path):
+
+        best_acc = 0
+
+        for epoch in range(epochs):
+            _logger.info(f'\nEpoch: {epoch+1}/{epochs}')
+            train_metrics = train(model, trainloader, criterion, optimizer, log_interval, device)
+            eval_metrics = test(model, testloader, criterion, log_interval, device)
+
+            scheduler.step()
+
+            # wandb
+            if use_wandb:
+                metrics = OrderedDict()
+                metrics.update([('train_' + k, v) for k, v in train_metrics.items()])
+                metrics.update([('eval_' + k, v) for k, v in eval_metrics.items()])
+                wandb.log(metrics)
+            
+            # checkpoint
+            if best_acc < eval_metrics['acc']:
+                state = {'best_epoch':epoch, 'best_acc':eval_metrics['acc']}
+                json.dump(state, open(os.path.join(savedir, f'{exp_name}.json'),'w'), indent=4)
+
+                torch.save(model.model.state_dict(), save_model_path)
+                
+                _logger.info('Best Accuracy {0:.3%} to {1:.3%}'.format(best_acc, eval_metrics['acc']))
+
+                best_acc = eval_metrics['acc']
+
+
+        _logger.info('Best Metric: {0:.3%} (epoch {1:})'.format(state['best_acc'], state['best_epoch']))
+    else:
         eval_metrics = test(model, testloader, criterion, log_interval, device)
 
-        scheduler.step()
-
-        # wandb
-        if use_wandb:
-            metrics = OrderedDict()
-            metrics.update([('train_' + k, v) for k, v in train_metrics.items()])
-            metrics.update([('eval_' + k, v) for k, v in eval_metrics.items()])
-            wandb.log(metrics)
-        
-        # checkpoint
-        if best_acc < eval_metrics['acc']:
-            state = {'best_epoch':epoch, 'best_acc':eval_metrics['acc']}
-            json.dump(state, open(os.path.join(savedir, f'{exp_name}.json'),'w'), indent=4)
-
-            torch.save(model.model.state_dict(), os.path.join(savedir, f'{exp_name}.pt'))
-            
-            _logger.info('Best Accuracy {0:.3%} to {1:.3%}'.format(best_acc, eval_metrics['acc']))
-
-            best_acc = eval_metrics['acc']
-
-
-    _logger.info('Best Metric: {0:.3%} (epoch {1:})'.format(state['best_acc'], state['best_epoch']))
+        state = {'best_acc':eval_metrics['acc']}
+        json.dump(state, open(os.path.join(savedir, f'{exp_name}_check.json'),'w'), indent=4)
 
 
 def run(args):
