@@ -1,0 +1,23 @@
+{
+    "exp_name": "resnet34/FAB",
+    "modelname": "resnet34",
+    "adv_name": "FAB",
+    "model_checkpoint": "./results/CIFAR10/saved_model/resnet34/resnet34.pt",
+    "model_dwt_checkpoint": "./results/CIFAR10/saved_model/resnet34_dwt/resnet34_dwt.pt",
+    "adv_method": "FAB",
+    "adv_config": "./configs_adv",
+    "noise_size": 0.05,
+    "datadir": "/datasets",
+    "savedir": "./results/CIFAR10/saved_adv_samples",
+    "dataname": "CIFAR10",
+    "num_classes": 10,
+    "batch_size": 64,
+    "num_workers": 8,
+    "log_interval": 10,
+    "seed": 223,
+    "eps": "8/255",
+    "steps": 30,
+    "n_restarts": 3,
+    "n_classes": 10,
+    "targeted": false
+}
