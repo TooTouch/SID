@@ -1,7 +1,7 @@
-modelname="resnet34"
+modelname="vgg19"
 adv_method_list=("DeepFool" "BIM" "CW" "CW" "FAB" "FGSM" "PGD" "PGD" "PGD")
 adv_expname_list=("DeepFool" "BIM" "CW" "Low_CW" "FAB" "FGSM" "PGD" "Low_PGD1" "Low_PGD2")
-dataname_list="CIFAR100"
+dataname_list="CIFAR10 SVHN CIFAR100"
 
 
 for dataname in $dataname_list

@@ -159,11 +159,12 @@ def run(args):
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     _logger.info('Device: {}'.format(device))
 
+
     trainloader, testloader = create_dataloader(
         datadir     = args.datadir, 
         dataname    = args.dataname, 
         batch_size  = args.batch_size, 
-        num_workers = args.num_workers
+        num_workers = args.num_workers,
     )
     
     # Build Model
@@ -181,8 +182,10 @@ def run(args):
     optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
 
     # scheduler
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[100,200,250], gamma=0.1)
-    # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
+    if args.modelname == 'resnet34':
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[100,200,250], gamma=0.1)
+    elif args.modelname == 'vgg19':
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[50,100], gamma=0.1)
 
     # Fitting model
     fit(exp_name     = args.exp_name,

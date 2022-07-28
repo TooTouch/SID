@@ -21,7 +21,7 @@ from dataloader import create_dataloader
 from log import setup_default_logging
 from models import create_model
 from utils import torch_seed, AverageMeter, extract_correct
-from adv_attacks import adv_attack
+from adv_attacks import create_attack
 
 
 _logger = logging.getLogger('adv sample')
@@ -60,7 +60,7 @@ def validate(model, model_dwt, testloader, adv_method, adv_params, noise_size, s
 
     successed_images = make_bucket()
     
-    atk = adv_attack(model, adv_method, adv_params)
+    atk = create_attack(model, adv_method, adv_params)
 
     model.eval()
     model_dwt.eval()
@@ -165,7 +165,7 @@ def run(args):
     os.makedirs(savedir, exist_ok=True)
 
     # load adversarial parameteres and update arguments
-    adv_params = json.load(open(os.path.join(args.adv_config, f'{args.adv_name.lower()}.json'),'r'))
+    adv_params = json.load(open(os.path.join(args.adv_config, f'{args.adv_name.lower()}.json'),'r'))    
     vars(args).update(adv_params)
 
     # save argsvars
