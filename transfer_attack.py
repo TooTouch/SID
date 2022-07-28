@@ -109,7 +109,7 @@ if __name__=='__main__':
 
     # dataset
     parser.add_argument('--savedir',type=str,default='./saved_model',help='saved model directory')
-    parser.add_argument('--dataname',type=str,default='CIFAR10',choices=['CIFAR10','SVHN'],help='data name')
+    parser.add_argument('--dataname',type=str,default='CIFAR10',choices=['CIFAR10','CIFAR100','SVHN'],help='data name')
     parser.add_argument('--num_classes',type=int,default=10,help='the number of classes')
 
     # training

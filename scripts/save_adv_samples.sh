@@ -13,6 +13,7 @@ python adv_samples.py \
 --dataname $dataname \
 --batch-size 64 \
 --noise_size 0.05 \
+--num_classes 100 \
 --adv_method $adv_method \
 --adv_config ./configs_adv \
 --model_checkpoint ./results/${dataname}/saved_model/$modelname/$modelname.pt \

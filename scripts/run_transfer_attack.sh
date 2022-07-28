@@ -8,6 +8,7 @@ python transfer_attack.py \
 --exp-name ${modelname} \
 --dataname $dataname \
 --batch-size 32 \
+--num_classes 100 \
 --known_attack_path ./results/${dataname}/known_attack_results/${modelname}
 
 
