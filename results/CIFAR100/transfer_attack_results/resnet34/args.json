@@ -1,0 +1,9 @@
+{
+    "exp_name": "resnet34",
+    "known_attack_path": "./results/CIFAR100/known_attack_results/resnet34",
+    "savedir": "./results/CIFAR100/transfer_attack_results",
+    "dataname": "CIFAR100",
+    "num_classes": 100,
+    "batch_size": 32,
+    "seed": 223
+}
