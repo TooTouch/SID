@@ -1,7 +1,9 @@
 # Detecting Adversarial Examples from Sensitivity Inconsistency of Spatial-Transform Domain
 
-Pytorch re-implementation for "Detecting Adversarial Examples from Sensitivity Inconsistency of Spatial-Transform Domain".
+Pytorch re-implementation for "Detecting Adversarial Examples from Sensitivity Inconsistency of Spatial-Transform Domain". AAAI 2021
 
+- **paper**: [Detecting Adversarial Examples from Sensitivity Inconsistency of Spatial-Transform Domain](https://arxiv.org/abs/2103.04302)
+- **official code**: https://github.com/JinyuTian/SID
 
 
 # Run
