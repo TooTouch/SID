@@ -170,6 +170,7 @@ def run(args):
     # Build Model
     model = create_model(
         modelname             = args.modelname, 
+        dataname              = args.dataname,
         num_classes           = args.num_classes, 
         use_wavelet_transform = args.use_wavelet_transform,
         checkpoint            = args.checkpoint

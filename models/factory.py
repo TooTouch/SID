@@ -3,10 +3,18 @@ import torch.nn as nn
 import os
 
 class Normalize(nn.Module):
-    def __init__(self, model):
+    def __init__(self, model, dataname):
         super(Normalize, self).__init__()
-        self.register_buffer('mean', torch.Tensor((0.4914, 0.4822, 0.4465)))
-        self.register_buffer('std', torch.Tensor((0.2023, 0.1994, 0.2010)))
+
+        if dataname.lower() == "cifar10":
+            m, s = [0.4914, 0.4822, 0.4465], [0.2023, 0.1994, 0.2010]
+        elif dataname.lower() == "cifar100":
+            m, s = [0.5071, 0.4865, 0.4409], [0.2673, 0.2564, 0.2762]
+        elif dataname.lower() == "svhn":
+            m, s = [0.4377, 0.4438, 0.4728], [0.1980, 0.2010, 0.1970]
+
+        self.register_buffer('mean', torch.Tensor(m))
+        self.register_buffer('std', torch.Tensor(s))
         
         self.model = model
 
@@ -18,7 +26,7 @@ class Normalize(nn.Module):
         return self.model(x)
 
 
-def create_model(modelname, num_classes=10, use_wavelet_transform=False, checkpoint=None, logits_dim=10):
+def create_model(modelname, dataname='CIFAR10', num_classes=10, use_wavelet_transform=False, checkpoint=None, logits_dim=10):
     model = __import__('models').__dict__[modelname](
         num_classes           = num_classes,
         use_wavelet_transform = use_wavelet_transform, 
@@ -26,7 +34,7 @@ def create_model(modelname, num_classes=10, use_wavelet_transform=False, checkpo
     )
 
     if modelname != 'detector':
-        model = Normalize(model)
+        model = Normalize(model, dataname)
 
     if checkpoint:
         assert os.path.isfile(checkpoint), "checkpoint does not exist"

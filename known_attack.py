@@ -469,6 +469,7 @@ def run(args):
     # Build Model
     model = create_model(
         modelname             = args.modelname, 
+        dataname              = args.dataname,
         num_classes           = args.num_classes, 
         use_wavelet_transform = False,
         checkpoint            = args.model_checkpoint
@@ -477,6 +478,7 @@ def run(args):
 
     model_dwt = create_model(
         modelname             = args.modelname, 
+        dataname              = args.dataname,
         num_classes           = args.num_classes, 
         use_wavelet_transform = True,
         checkpoint            = args.model_dwt_checkpoint
