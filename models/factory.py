@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import os
 
 class Normalize(nn.Module):
     def __init__(self, model):
@@ -24,28 +25,15 @@ def create_model(modelname, num_classes=10, use_wavelet_transform=False, checkpo
         logits_dim            = logits_dim
     )
 
-    # if checkpoint:
-    #     state = torch.load(checkpoint)
-    #     if use_wavelet_transform:
-    #         state_prev = state['state_dict']
-    #         state = state['state_dict'].copy()
-    #         for key in state_prev.keys():
-    #             if key.split('.')[0] == 'module':
-    #                 newkey = key.split('module.')[1]
-    #                 state.update({newkey: state.pop(key)})
-    #             elif key.split('.')[1] == 'module':
-    #                 newkey = key.split('module.')[0]+key.split('module.')[1]
-    #                 state.update({newkey: state.pop(key)})
-                    
-    #     model.load_state_dict(state)
-
     if modelname != 'detector':
         model = Normalize(model)
 
     if checkpoint:
+        assert os.path.isfile(checkpoint), "checkpoint does not exist"
         if modelname != 'detector':
             model.model.load_state_dict(torch.load(checkpoint))
         else:
             model.load_state_dict(torch.load(checkpoint))
+            
 
     return model
