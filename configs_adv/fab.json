@@ -2,6 +2,6 @@
     "eps":"8/255",
     "steps":30,
     "n_restarts":3,
-    "n_classes":10,
+    "n_classes":100,
     "targeted":false
 }

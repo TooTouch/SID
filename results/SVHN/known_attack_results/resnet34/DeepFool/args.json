@@ -1,0 +1,16 @@
+{
+    "exp_name": "resnet34/DeepFool",
+    "modelname": "resnet34",
+    "model_checkpoint": "./results/SVHN/saved_model/resnet34/resnet34.pt",
+    "model_dwt_checkpoint": "./results/SVHN/saved_model/resnet34_dwt/resnet34_dwt.pt",
+    "datadir": "/datasets",
+    "savedir": "./results/SVHN/known_attack_results",
+    "save_bucket_path": "./results/SVHN/saved_adv_samples/resnet34/DeepFool/successed_images.pkl",
+    "dataname": "SVHN",
+    "num_classes": 10,
+    "epochs": 200,
+    "batch_size": 32,
+    "log_interval": 10,
+    "train_ratio": 0.6,
+    "seed": 223
+}
