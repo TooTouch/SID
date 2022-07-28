@@ -194,3 +194,15 @@ done
 | Low_PGD2 |      75.87 | 95.21 | 93.79 |    81.86 | 62.61 |  90.29 | 94.70 |      87.53 |      95.90 |
 
 
+
+
+# Citations
+
+```bibtex
+@article{kim2020torchattacks,
+  title={Torchattacks: A pytorch repository for adversarial attacks},
+  author={Kim, Hoki},
+  journal={arXiv preprint arXiv:2010.01950},
+  year={2020}
+}
+```
