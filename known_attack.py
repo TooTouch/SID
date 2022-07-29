@@ -47,7 +47,7 @@ _logger = logging.getLogger('known attack')
 
 
 
-def get_logits(model, model_dwt, images, targets, batch_size, train_ratio, seed, adv_examples=False, device='cpu'):
+def get_logits(model, model_dwt, images, targets, batch_size, train_ratio, dev_ratio, seed, adv_examples=False, device='cpu'):
     
     # init
     consistency_logits = torch.Tensor([])
@@ -104,48 +104,64 @@ def get_logits(model, model_dwt, images, targets, batch_size, train_ratio, seed,
                 ])
     
 
-    # train and test split
-    consistency_train_size = int(len(consistency_targets) * train_ratio)
-    inconsistency_train_size = int(len(inconsistency_targets) * train_ratio)
+    # train, dev and test split
+    cons_train_size = int(len(consistency_targets) * train_ratio)
+    incons_train_size = int(len(inconsistency_targets) * train_ratio)
+    cons_dev_size = int(len(consistency_targets) * dev_ratio)
+    incons_dev_size = int(len(inconsistency_targets) * dev_ratio)
 
     torch_seed(seed)
     consistency_random_idx = np.random.permutation(len(consistency_targets))
     inconsistency_random_idx = np.random.permutation(len(inconsistency_targets))
 
 
-    # train and test labels
+    # train, dev and test labels
     if not adv_examples:
         consistency_labels = torch.zeros_like(consistency_targets).long()
         inconsistency_labels = torch.ones_like(inconsistency_targets).long()
 
         train_labels = torch.cat([
-            consistency_labels[consistency_random_idx[:consistency_train_size]],
-            inconsistency_labels[inconsistency_random_idx[:inconsistency_train_size]]
+            consistency_labels[:cons_train_size],
+            inconsistency_labels[:incons_train_size]
+        ])
+
+        dev_labels = torch.cat([
+            consistency_labels[cons_train_size:cons_dev_size],
+            inconsistency_labels[incons_train_size:incons_dev_size]
         ])
 
         test_labels = torch.cat([
-            consistency_labels[consistency_random_idx[consistency_train_size:]],
-            inconsistency_labels[inconsistency_random_idx[inconsistency_train_size:]]
+            consistency_labels[cons_train_size+cons_dev_size:],
+            inconsistency_labels[incons_train_size+incons_dev_size:]
         ])
     else:
         labels = 2 * torch.ones_like(consistency_targets).long()
-        train_labels = labels[consistency_random_idx[:consistency_train_size]]
-        test_labels = labels[consistency_random_idx[consistency_train_size:]]
+        train_labels = labels[:cons_train_size]
+        dev_labels = labels[cons_train_size:cons_dev_size]
+        test_labels = labels[cons_train_size+cons_dev_size:]
 
 
-    # train and test logits
+    # train, dev and test logits
     train_logits =  {
         'consistency':{
-            'logits' :consistency_logits[consistency_random_idx[:consistency_train_size]], 
-            'targets':consistency_targets[consistency_random_idx[:consistency_train_size]]
+            'logits' :consistency_logits[consistency_random_idx[:cons_train_size]], 
+            'targets':consistency_targets[consistency_random_idx[:cons_train_size]]
         },
         'labels':train_labels
     }
 
+    dev_logits =  {
+        'consistency':{
+            'logits' :consistency_logits[consistency_random_idx[cons_train_size:cons_dev_size]], 
+            'targets':consistency_targets[consistency_random_idx[cons_train_size:cons_dev_size]]
+        },
+        'labels':dev_labels
+    }
+
     test_logits =  {
         'consistency':{
-            'logits' :consistency_logits[consistency_random_idx[consistency_train_size:]], 
-            'targets':consistency_targets[consistency_random_idx[consistency_train_size:]]
+            'logits' :consistency_logits[consistency_random_idx[cons_train_size+cons_dev_size:]], 
+            'targets':consistency_targets[consistency_random_idx[cons_train_size+cons_dev_size:]]
         },
         'labels':test_labels
     }
@@ -153,66 +169,76 @@ def get_logits(model, model_dwt, images, targets, batch_size, train_ratio, seed,
     if not adv_examples:
         train_logits.update({
             'inconsistency':{
-                'logits' :inconsistency_logits[inconsistency_random_idx[:inconsistency_train_size]], 
-                'targets':inconsistency_targets[inconsistency_random_idx[:inconsistency_train_size]]
+                'logits' :inconsistency_logits[inconsistency_random_idx[:incons_train_size]], 
+                'targets':inconsistency_targets[inconsistency_random_idx[:incons_train_size]]
+            }
+        })
+
+        dev_logits.update({
+            'inconsistency':{
+                'logits' :inconsistency_logits[inconsistency_random_idx[incons_train_size:incons_dev_size]], 
+                'targets':inconsistency_targets[inconsistency_random_idx[incons_train_size:incons_dev_size]]
             }
         })
         
         test_logits.update({
             'inconsistency':{
-                'logits' :inconsistency_logits[inconsistency_random_idx[inconsistency_train_size:]], 
-                'targets':inconsistency_targets[inconsistency_random_idx[inconsistency_train_size:]]
+                'logits' :inconsistency_logits[inconsistency_random_idx[incons_train_size+incons_dev_size:]], 
+                'targets':inconsistency_targets[inconsistency_random_idx[incons_train_size+incons_dev_size:]]
             }
         })
 
-    return train_logits, test_logits
+    return train_logits, dev_logits, test_logits
 
 
-def get_stack_logits(model, model_dwt, save_path, batch_size, train_ratio, seed, savedir, device='cpu'):
+def get_stack_logits(model, model_dwt, save_path, batch_size, train_ratio, dev_ratio, seed, savedir, device='cpu'):
 
     # if os.os.path.join(savedir, 'train.pt')
     bucket = pickle.load(open(save_path, 'rb'))
 
-    clean_train_logits, clean_test_logits = get_logits(
+    clean_train_logits, clean_dev_logits, clean_test_logits = get_logits(
         model        = model, 
         model_dwt    = model_dwt, 
         images       = bucket['clean'], 
         targets      = bucket['targets'], 
         batch_size   = batch_size, 
         train_ratio  = train_ratio,
+        dev_ratio    = dev_ratio,
         seed         = seed,
         adv_examples = False, 
         device       = device
     )
 
-    noise_train_logits, noise_test_logits = get_logits(
+    noise_train_logits, noise_dev_logits, noise_test_logits = get_logits(
         model        = model, 
         model_dwt    = model_dwt, 
         images       = bucket['noise'], 
         targets      = bucket['targets'], 
         batch_size   = batch_size, 
         train_ratio  = train_ratio,
+        dev_ratio    = dev_ratio,
         seed         = seed,
         adv_examples = False, 
         device       = device
     )
 
-    adv_train_logits, adv_test_logits = get_logits(
+    adv_train_logits, adv_dev_logits, adv_test_logits = get_logits(
         model        = model, 
         model_dwt    = model_dwt, 
         images       = bucket['adv'], 
         targets      = bucket['targets'], 
         batch_size   = batch_size, 
         train_ratio  = train_ratio,
+        dev_ratio    = dev_ratio,
         seed         = seed,
         adv_examples = True, 
         device       = device
     )
 
     train_logits, train_labels, test_logits, test_labels = save_logits(
-        clean_logits = [clean_train_logits, clean_test_logits],
-        noise_logits = [noise_train_logits, noise_test_logits],
-        adv_logits   = [adv_train_logits, adv_test_logits],
+        clean_logits = [clean_train_logits, clean_dev_logits, clean_test_logits],
+        noise_logits = [noise_train_logits, noise_dev_logits, noise_test_logits],
+        adv_logits   = [adv_train_logits, adv_dev_logits, adv_test_logits],
         savedir      = savedir
     )
 
@@ -220,9 +246,9 @@ def get_stack_logits(model, model_dwt, save_path, batch_size, train_ratio, seed,
 
 
 def save_logits(clean_logits: list, noise_logits: list, adv_logits: list, savedir: str):
-    clean_train_logits, clean_test_logits = clean_logits
-    noise_train_logits, noise_test_logits = noise_logits
-    adv_train_logits, adv_test_logits = adv_logits
+    clean_train_logits, clean_dev_logits, clean_test_logits = clean_logits
+    noise_train_logits, noise_dev_logits, noise_test_logits = noise_logits
+    adv_train_logits, adv_dev_logits, adv_test_logits = adv_logits
 
     # logits
     train_logits = torch.cat([
@@ -231,6 +257,14 @@ def save_logits(clean_logits: list, noise_logits: list, adv_logits: list, savedi
         noise_train_logits['consistency']['logits'],
         noise_train_logits['inconsistency']['logits'],
         adv_train_logits['consistency']['logits']
+    ], dim=0)
+
+    dev_logits = torch.cat([
+        clean_dev_logits['consistency']['logits'],
+        clean_dev_logits['inconsistency']['logits'],
+        noise_dev_logits['consistency']['logits'],
+        noise_dev_logits['inconsistency']['logits'],
+        adv_dev_logits['consistency']['logits']
     ], dim=0)
 
     test_logits = torch.cat([
@@ -248,6 +282,12 @@ def save_logits(clean_logits: list, noise_logits: list, adv_logits: list, savedi
         adv_train_logits['labels']
     ], dim=0)
 
+    dev_labels = torch.cat([
+        clean_dev_logits['labels'],
+        noise_dev_logits['labels'],
+        adv_dev_logits['labels']
+    ], dim=0)
+
     test_labels = torch.cat([
         clean_test_logits['labels'],
         noise_test_logits['labels'],
@@ -259,6 +299,10 @@ def save_logits(clean_logits: list, noise_logits: list, adv_logits: list, savedi
         'train':{
             'logits':train_logits, 
             'labels':train_labels, 
+        },
+        'dev':{
+            'logits':dev_logits, 
+            'labels':dev_labels, 
         },
         'test':{
             'logits':test_logits, 
@@ -272,7 +316,7 @@ def save_logits(clean_logits: list, noise_logits: list, adv_logits: list, savedi
     for k, v in save_dict.items():
         torch.save(v, os.path.join(savedir, f'{k}.pt'))
 
-    return train_logits, train_labels, test_logits, test_labels
+    return train_logits, train_labels, dev_logits, dev_labels, test_logits, test_labels
 
 
 def train(model, dataloader, criterion, optimizer, log_interval=-1, verbose=True, device='cpu'):   
@@ -344,7 +388,7 @@ def train(model, dataloader, criterion, optimizer, log_interval=-1, verbose=True
                  acc        = acc_m))
 
         
-def test(model, dataloader, criterion, log_interval=-1, verbose=True, device='cpu'):
+def test(model, dataloader, criterion, log_interval=-1, name='TEST', verbose=True, device='cpu'):
     correct = 0
     total = 0
     total_loss = 0
@@ -374,8 +418,8 @@ def test(model, dataloader, criterion, log_interval=-1, verbose=True, device='cp
             targets_total = torch.cat([targets_total, targets.detach().cpu()], dim=0)
 
             if (idx % log_interval == 0 and idx != 0) and verbose: 
-                _logger.info('TEST [%d/%d]: Loss: %.3f | Acc: %.3f%% [%d/%d]' % 
-                            (idx+1, len(dataloader), total_loss/(idx+1), 100.*correct/total, correct, total))
+                _logger.info('%s [%d/%d]: Loss: %.3f | Acc: %.3f%% [%d/%d]' % 
+                            (name, idx+1, len(dataloader), total_loss/(idx+1), 100.*correct/total, correct, total))
 
     # auroc
     results = get_auroc(outputs_total, targets_total)
@@ -389,17 +433,18 @@ def test(model, dataloader, criterion, log_interval=-1, verbose=True, device='cp
 def train_detector(
     model, model_dwt, detector,
     save_bucket_path, savedir, 
-    epochs, batch_size, train_ratio, 
+    epochs, batch_size, train_ratio, dev_ratio,
     log_interval, seed, device='cpu'
 ):
 
     # get logits
-    train_logits, train_labels, test_logits, test_labels = get_stack_logits(
+    train_logits, train_labels, dev_logits, dev_labels, test_logits, test_labels = get_stack_logits(
         model       = model, 
         model_dwt   = model_dwt, 
         save_path   = save_bucket_path, 
         batch_size  = batch_size, 
         train_ratio = train_ratio, 
+        dev_ratio   = dev_ratio,
         seed        = seed, 
         savedir     = savedir,
         device      = device
@@ -408,6 +453,13 @@ def train_detector(
     # make dataloader
     trainloader = DataLoader(
         TensorDataset(train_logits, train_labels),
+        batch_size  = batch_size,
+        shuffle     = True,
+        num_workers = 1
+    )
+
+    devloader = DataLoader(
+        TensorDataset(dev_logits, dev_labels),
         batch_size  = batch_size,
         shuffle     = True,
         num_workers = 1
@@ -430,7 +482,6 @@ def train_detector(
         weight_decay = 5e-3
     )
 
-    # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, [40,50,60,70], gamma=1.1, last_epoch=-1)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
 
     # train and test
@@ -439,14 +490,15 @@ def train_detector(
         _logger.info(f'\nEpoch: {epoch+1}/{epochs}')
         
         train(detector, trainloader, criterion, optimizer, log_interval, True, device)
-        results = test(detector, testloader, criterion, log_interval, True, device)
+        dev_results = test(detector, devloader, criterion, log_interval, 'DEV', True, device)
+        test_results = test(detector, testloader, criterion, log_interval, 'TEST', True, device)
 
-        auroc = results['AUROC']
+        auroc = dev_results['AUROC']
         if auroc > best_auroc:
             best_auroc = auroc
 
             state = {'best_epoch':epoch}
-            state.update(results)
+            state.update({'dev':dev_results, 'test':test_results})
             json.dump(state, open(os.path.join(savedir, 'result.json'), 'w'), indent=4)
             torch.save(detector.state_dict(), os.path.join(savedir, 'detector.pt'))
 
@@ -501,6 +553,7 @@ def run(args):
         epochs           = args.epochs, 
         batch_size       = args.batch_size, 
         train_ratio      = args.train_ratio, 
+        dev_ratio        = args.dev_ratio,
         log_interval     = args.log_interval, 
         seed             = args.seed, 
         device           = device
@@ -522,12 +575,13 @@ if __name__=='__main__':
     parser.add_argument('--save_bucket_path',type=str,help='saved bucket path')
     parser.add_argument('--dataname',type=str,default='CIFAR10',choices=['CIFAR10','CIFAR100','SVHN'],help='data name')
     parser.add_argument('--num_classes',type=int,default=10,help='the number of classes')
+    parser.add_argument('--train_ratio',type=float,default=0.6,help='train ratio')
+    parser.add_argument('--dev_ratio',type=float,default=0.1,help='dev ratio')
 
     # training
     parser.add_argument('--epochs',type=int,default=100,help='the number of epochs')
     parser.add_argument('--batch-size',type=int,default=128,help='batch size')
     parser.add_argument('--log-interval',type=int,default=10,help='log interval')
-    parser.add_argument('--train_ratio',type=float,default=0.6,help='train ratio')
     parser.add_argument('--seed',type=int,default=223,help='223 is my birthday')
 
     args = parser.parse_args()

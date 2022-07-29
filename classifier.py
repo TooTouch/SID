@@ -70,7 +70,7 @@ def train(model, dataloader, criterion, optimizer, log_interval, device='cpu'):
     
     return OrderedDict([('acc',acc_m.avg), ('loss',losses_m.avg)])
         
-def test(model, dataloader, criterion, log_interval, device='cpu'):
+def test(model, dataloader, criterion, log_interval, name, device='cpu'):
     correct = 0
     total = 0
     total_loss = 0
@@ -93,13 +93,13 @@ def test(model, dataloader, criterion, log_interval, device='cpu'):
             total += targets.size(0)
             
             if idx % log_interval == 0 and idx != 0: 
-                _logger.info('TEST [%d/%d]: Loss: %.3f | Acc: %.3f%% [%d/%d]' % 
-                            (idx+1, len(dataloader), total_loss/(idx+1), 100.*correct/total, correct, total))
+                _logger.info('%s [%d/%d]: Loss: %.3f | Acc: %.3f%% [%d/%d]' % 
+                            (name, idx+1, len(dataloader), total_loss/(idx+1), 100.*correct/total, correct, total))
                 
     return OrderedDict([('acc',correct/total), ('loss',total_loss/len(dataloader))])
                 
 def fit(
-    exp_name, model, epochs, trainloader, testloader, criterion, optimizer, scheduler, 
+    exp_name, model, epochs, trainloader, devloader, testloader, criterion, optimizer, scheduler, 
     savedir, log_interval, use_wandb, device='cpu'
 ):
     
@@ -112,7 +112,8 @@ def fit(
         for epoch in range(epochs):
             _logger.info(f'\nEpoch: {epoch+1}/{epochs}')
             train_metrics = train(model, trainloader, criterion, optimizer, log_interval, device)
-            eval_metrics = test(model, testloader, criterion, log_interval, device)
+            eval_metrics = test(model, devloader, criterion, log_interval, 'DEV', device)
+            test_metrics = test(model, testloader, criterion, log_interval, 'TEST', device)
 
             scheduler.step()
 
@@ -125,7 +126,7 @@ def fit(
             
             # checkpoint
             if best_acc < eval_metrics['acc']:
-                state = {'best_epoch':epoch, 'best_acc':eval_metrics['acc']}
+                state = {'best_epoch':epoch, 'best_dev_acc':eval_metrics['acc'], 'best_test_acc':test_metrics['acc']}
                 json.dump(state, open(os.path.join(savedir, f'{exp_name}.json'),'w'), indent=4)
 
                 torch.save(model.model.state_dict(), save_model_path)
@@ -134,12 +135,12 @@ def fit(
 
                 best_acc = eval_metrics['acc']
 
-
         _logger.info('Best Metric: {0:.3%} (epoch {1:})'.format(state['best_acc'], state['best_epoch']))
     else:
-        eval_metrics = test(model, testloader, criterion, log_interval, device)
+        eval_metrics = test(model, devloader, criterion, log_interval, 'DEV', device)
+        test_metrics = test(model, testloader, criterion, log_interval, 'TEST', device)
 
-        state = {'best_acc':eval_metrics['acc']}
+        state = {'best_dev_acc':eval_metrics['acc'], 'best_test_acc':test_metrics['acc']}
         json.dump(state, open(os.path.join(savedir, f'{exp_name}_check.json'),'w'), indent=4)
 
 
@@ -160,9 +161,10 @@ def run(args):
     _logger.info('Device: {}'.format(device))
 
 
-    trainloader, testloader = create_dataloader(
+    trainloader, devloader, testloader = create_dataloader(
         datadir     = args.datadir, 
         dataname    = args.dataname, 
+        dev_ratio   = args.dev_ratio,
         batch_size  = args.batch_size, 
         num_workers = args.num_workers,
     )
@@ -193,6 +195,7 @@ def run(args):
         model        = model, 
         epochs       = args.epochs, 
         trainloader  = trainloader, 
+        devloader    = devloader,
         testloader   = testloader, 
         criterion    = criterion, 
         optimizer    = optimizer, 
@@ -214,6 +217,7 @@ if __name__=='__main__':
     parser.add_argument('--savedir',type=str,default='./saved_model',help='saved model directory')
     parser.add_argument('--dataname',type=str,default='CIFAR10',choices=['CIFAR10','CIFAR100','SVHN'],help='data name')
     parser.add_argument('--num_classes',type=int,default=10,help='the number of classes')
+    parser.add_argument('--dev_ratio',type=float,default=0.1,help='dev set split ratio')
 
     # training
     parser.add_argument('--epochs',type=int,default=300,help='the number of epochs')

@@ -50,7 +50,7 @@ def extract_success(
 
     return bucket
 
-def validate(model, model_dwt, testloader, adv_method, adv_params, noise_size, savedir, log_interval=1, device='cpu'):
+def validate(model, model_dwt, num_classes, testloader, adv_method, adv_params, noise_size, savedir, log_interval=1, device='cpu'):
 
     clean_acc = AverageMeter()
     noise_acc = AverageMeter()
@@ -60,7 +60,7 @@ def validate(model, model_dwt, testloader, adv_method, adv_params, noise_size, s
 
     successed_images = make_bucket()
     
-    atk = create_attack(model, adv_method, adv_params)
+    atk = create_attack(model, adv_method, adv_params, num_classes=num_classes)
 
     model.eval()
     model_dwt.eval()
@@ -174,7 +174,7 @@ def run(args):
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     _logger.info('Device: {}'.format(device))
 
-    _, testloader = create_dataloader(
+    _, _, testloader = create_dataloader(
         datadir     = args.datadir, 
         dataname    = args.dataname, 
         batch_size  = args.batch_size, 
@@ -203,6 +203,7 @@ def run(args):
     validate(
         model        = model, 
         model_dwt    = model_dwt, 
+        num_classes  = args.num_classes,
         testloader   = testloader, 
         adv_method   = args.adv_method, 
         adv_params   = adv_params, 

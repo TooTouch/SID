@@ -1,3 +1,4 @@
 {
-    "best_acc": 0.9312
+    "best_dev_acc": 0.9294,
+    "best_test_acc": 0.9312
 }

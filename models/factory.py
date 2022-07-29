@@ -11,7 +11,7 @@ class Normalize(nn.Module):
         elif dataname.lower() == "cifar100":
             m, s = [0.5071, 0.4865, 0.4409], [0.2673, 0.2564, 0.2762]
         elif dataname.lower() == "svhn":
-            m, s = [0.4377, 0.4438, 0.4728], [0.1980, 0.2010, 0.1970]
+            m, s = [0.5, 0.5, 0.5], [0.5, 0.5, 0.5]
 
         self.register_buffer('mean', torch.Tensor(m))
         self.register_buffer('std', torch.Tensor(s))
