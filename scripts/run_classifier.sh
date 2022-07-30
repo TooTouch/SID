@@ -38,4 +38,5 @@ python classifier.py \
 --num_classes $num_classes \
 --epochs $epochs \
 --use_wavelet_transform \
---savedir ./results/${dataname}/saved_model
+--savedir ./results/${dataname}/saved_model \
+--checkpoint ./results/${dataname}/saved_model/${modelname}_dwt/${modelname}_dwt.pt

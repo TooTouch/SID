@@ -135,7 +135,7 @@ def fit(
 
                 best_acc = eval_metrics['acc']
 
-        _logger.info('Best Metric: {0:.3%} (epoch {1:})'.format(state['best_acc'], state['best_epoch']))
+        _logger.info('Best Dev Metric: {0:.3%} | Best Test Metric: {0:.3%} (epoch {1:})'.format(state['best_dev_acc'], state['best_test_acc'], state['best_epoch']))
     else:
         eval_metrics = test(model, devloader, criterion, log_interval, 'DEV', device)
         test_metrics = test(model, testloader, criterion, log_interval, 'TEST', device)

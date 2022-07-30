@@ -6,7 +6,7 @@ import os
 import numpy as np
 from random import seed, shuffle
 
-def create_dataloader(datadir, dataname, dev_ratio, batch_size, num_workers):
+def create_dataloader(datadir, dataname, dev_ratio=0.1, batch_size=4, num_workers=1):
     # Load Data
     transform_train = transforms.Compose([
         transforms.RandomCrop(32, padding=4),

@@ -68,7 +68,10 @@ def validate(model, model_dwt, num_classes, testloader, adv_method, adv_params, 
 
         # clean, noise, and adv examples
         inputs, targets = inputs.to(device), targets.to(device)
+
         inputs_noise = torch.add(inputs, torch.randn_like(inputs).to(device), alpha=noise_size)
+        inputs_noise = torch.clamp(inputs_noise, 0, 1)
+
         inputs_adv = atk(inputs, targets)
 
         # clean pred
@@ -164,54 +167,56 @@ def run(args):
     savedir = os.path.join(args.savedir,args.exp_name)
     os.makedirs(savedir, exist_ok=True)
 
-    # load adversarial parameteres and update arguments
-    adv_params = json.load(open(os.path.join(args.adv_config, f'{args.adv_name.lower()}.json'),'r'))    
-    vars(args).update(adv_params)
+    # check file
+    if not os.path.isfile(os.path.join(savedir, 'successed_images.pkl')):
+        # load adversarial parameteres and update arguments
+        adv_params = json.load(open(os.path.join(args.adv_config, f'{args.adv_name.lower()}.json'),'r'))    
+        vars(args).update(adv_params)
 
-    # save argsvars
-    json.dump(vars(args), open(os.path.join(savedir, 'args.json'), 'w'), indent=4)
+        # save argsvars
+        json.dump(vars(args), open(os.path.join(savedir, 'args.json'), 'w'), indent=4)
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-    _logger.info('Device: {}'.format(device))
+        device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+        _logger.info('Device: {}'.format(device))
 
-    _, _, testloader = create_dataloader(
-        datadir     = args.datadir, 
-        dataname    = args.dataname, 
-        batch_size  = args.batch_size, 
-        num_workers = args.num_workers
-    )
-    
-    # Build Model
-    model = create_model(
-        modelname             = args.modelname, 
-        dataname              = args.dataname,
-        num_classes           = args.num_classes, 
-        use_wavelet_transform = False,
-        checkpoint            = args.model_checkpoint
-    ).to(device)
+        _, _, testloader = create_dataloader(
+            datadir     = args.datadir, 
+            dataname    = args.dataname, 
+            batch_size  = args.batch_size, 
+            num_workers = args.num_workers
+        )
+        
+        # Build Model
+        model = create_model(
+            modelname             = args.modelname, 
+            dataname              = args.dataname,
+            num_classes           = args.num_classes, 
+            use_wavelet_transform = False,
+            checkpoint            = args.model_checkpoint
+        ).to(device)
 
-    model_dwt = create_model(
-        modelname             = args.modelname, 
-        dataname              = args.dataname,
-        num_classes           = args.num_classes, 
-        use_wavelet_transform = True,
-        checkpoint            = args.model_dwt_checkpoint
-    ).to(device)
-    
+        model_dwt = create_model(
+            modelname             = args.modelname, 
+            dataname              = args.dataname,
+            num_classes           = args.num_classes, 
+            use_wavelet_transform = True,
+            checkpoint            = args.model_dwt_checkpoint
+        ).to(device)
+        
 
-    # validate
-    validate(
-        model        = model, 
-        model_dwt    = model_dwt, 
-        num_classes  = args.num_classes,
-        testloader   = testloader, 
-        adv_method   = args.adv_method, 
-        adv_params   = adv_params, 
-        noise_size   = args.noise_size, 
-        savedir      = savedir, 
-        log_interval = args.log_interval, 
-        device       = device
-    )
+        # validate
+        validate(
+            model        = model, 
+            model_dwt    = model_dwt, 
+            num_classes  = args.num_classes,
+            testloader   = testloader, 
+            adv_method   = args.adv_method, 
+            adv_params   = adv_params, 
+            noise_size   = args.noise_size, 
+            savedir      = savedir, 
+            log_interval = args.log_interval, 
+            device       = device
+        )
 
 
 if __name__=='__main__':

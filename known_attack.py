@@ -126,8 +126,8 @@ def get_logits(model, model_dwt, images, targets, batch_size, train_ratio, dev_r
         ])
 
         dev_labels = torch.cat([
-            consistency_labels[cons_train_size:cons_dev_size],
-            inconsistency_labels[incons_train_size:incons_dev_size]
+            consistency_labels[cons_train_size:cons_train_size+cons_dev_size],
+            inconsistency_labels[incons_train_size:incons_train_size+incons_dev_size]
         ])
 
         test_labels = torch.cat([
@@ -137,7 +137,7 @@ def get_logits(model, model_dwt, images, targets, batch_size, train_ratio, dev_r
     else:
         labels = 2 * torch.ones_like(consistency_targets).long()
         train_labels = labels[:cons_train_size]
-        dev_labels = labels[cons_train_size:cons_dev_size]
+        dev_labels = labels[cons_train_size:cons_train_size+cons_dev_size]
         test_labels = labels[cons_train_size+cons_dev_size:]
 
 
@@ -152,8 +152,8 @@ def get_logits(model, model_dwt, images, targets, batch_size, train_ratio, dev_r
 
     dev_logits =  {
         'consistency':{
-            'logits' :consistency_logits[consistency_random_idx[cons_train_size:cons_dev_size]], 
-            'targets':consistency_targets[consistency_random_idx[cons_train_size:cons_dev_size]]
+            'logits' :consistency_logits[consistency_random_idx[cons_train_size:cons_train_size+cons_dev_size]], 
+            'targets':consistency_targets[consistency_random_idx[cons_train_size:cons_train_size+cons_dev_size]]
         },
         'labels':dev_labels
     }
@@ -176,8 +176,8 @@ def get_logits(model, model_dwt, images, targets, batch_size, train_ratio, dev_r
 
         dev_logits.update({
             'inconsistency':{
-                'logits' :inconsistency_logits[inconsistency_random_idx[incons_train_size:incons_dev_size]], 
-                'targets':inconsistency_targets[inconsistency_random_idx[incons_train_size:incons_dev_size]]
+                'logits' :inconsistency_logits[inconsistency_random_idx[incons_train_size:incons_train_size+incons_dev_size]], 
+                'targets':inconsistency_targets[inconsistency_random_idx[incons_train_size:incons_train_size+incons_dev_size]]
             }
         })
         
@@ -209,19 +209,6 @@ def get_stack_logits(model, model_dwt, save_path, batch_size, train_ratio, dev_r
         device       = device
     )
 
-    noise_train_logits, noise_dev_logits, noise_test_logits = get_logits(
-        model        = model, 
-        model_dwt    = model_dwt, 
-        images       = bucket['noise'], 
-        targets      = bucket['targets'], 
-        batch_size   = batch_size, 
-        train_ratio  = train_ratio,
-        dev_ratio    = dev_ratio,
-        seed         = seed,
-        adv_examples = False, 
-        device       = device
-    )
-
     adv_train_logits, adv_dev_logits, adv_test_logits = get_logits(
         model        = model, 
         model_dwt    = model_dwt, 
@@ -235,62 +222,51 @@ def get_stack_logits(model, model_dwt, save_path, batch_size, train_ratio, dev_r
         device       = device
     )
 
-    train_logits, train_labels, test_logits, test_labels = save_logits(
+    train_logits, train_labels, dev_logits, dev_labels, test_logits, test_labels = save_logits(
         clean_logits = [clean_train_logits, clean_dev_logits, clean_test_logits],
-        noise_logits = [noise_train_logits, noise_dev_logits, noise_test_logits],
         adv_logits   = [adv_train_logits, adv_dev_logits, adv_test_logits],
         savedir      = savedir
     )
 
-    return train_logits, train_labels, test_logits, test_labels
+    return train_logits, train_labels, dev_logits, dev_labels, test_logits, test_labels
 
 
-def save_logits(clean_logits: list, noise_logits: list, adv_logits: list, savedir: str):
+def save_logits(clean_logits: list, adv_logits: list, savedir: str):
     clean_train_logits, clean_dev_logits, clean_test_logits = clean_logits
-    noise_train_logits, noise_dev_logits, noise_test_logits = noise_logits
     adv_train_logits, adv_dev_logits, adv_test_logits = adv_logits
 
     # logits
     train_logits = torch.cat([
         clean_train_logits['consistency']['logits'],
         clean_train_logits['inconsistency']['logits'],
-        noise_train_logits['consistency']['logits'],
-        noise_train_logits['inconsistency']['logits'],
         adv_train_logits['consistency']['logits']
     ], dim=0)
 
     dev_logits = torch.cat([
         clean_dev_logits['consistency']['logits'],
         clean_dev_logits['inconsistency']['logits'],
-        noise_dev_logits['consistency']['logits'],
-        noise_dev_logits['inconsistency']['logits'],
         adv_dev_logits['consistency']['logits']
     ], dim=0)
 
     test_logits = torch.cat([
         clean_test_logits['consistency']['logits'],
         clean_test_logits['inconsistency']['logits'],
-        noise_test_logits['consistency']['logits'],
-        noise_test_logits['inconsistency']['logits'],
         adv_test_logits['consistency']['logits']
     ], dim=0)
 
     # labels
     train_labels = torch.cat([
         clean_train_logits['labels'],
-        noise_train_logits['labels'],
         adv_train_logits['labels']
     ], dim=0)
 
     dev_labels = torch.cat([
         clean_dev_logits['labels'],
-        noise_dev_logits['labels'],
         adv_dev_logits['labels']
     ], dim=0)
 
     test_labels = torch.cat([
         clean_test_logits['labels'],
-        noise_test_logits['labels'],
         adv_test_logits['labels']
     ], dim=0)
 
