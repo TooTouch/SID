@@ -1,0 +1,17 @@
+{
+    "exp_name": "vgg19/CW",
+    "modelname": "vgg19",
+    "model_checkpoint": "./results/SVHN/saved_model/vgg19/vgg19.pt",
+    "model_dwt_checkpoint": "./results/SVHN/saved_model/vgg19_dwt/vgg19_dwt.pt",
+    "datadir": "/datasets",
+    "savedir": "./results/SVHN/known_attack_results",
+    "save_bucket_path": "./results/SVHN/saved_adv_samples/vgg19/CW/successed_images.pkl",
+    "dataname": "SVHN",
+    "num_classes": 10,
+    "train_ratio": 0.6,
+    "dev_ratio": 0.1,
+    "epochs": 200,
+    "batch_size": 32,
+    "log_interval": 10,
+    "seed": 223
+}

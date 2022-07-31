@@ -1,0 +1,9 @@
+{
+    "exp_name": "vgg19",
+    "known_attack_path": "./results/SVHN/known_attack_results/vgg19",
+    "savedir": "./results/SVHN/transfer_attack_results",
+    "dataname": "SVHN",
+    "num_classes": 10,
+    "batch_size": 32,
+    "seed": 223
+}

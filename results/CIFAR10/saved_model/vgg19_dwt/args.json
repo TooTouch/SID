@@ -1,7 +1,7 @@
 {
     "exp_name": "vgg19_dwt",
     "modelname": "vgg19",
-    "checkpoint": null,
+    "checkpoint": "./results/CIFAR10/saved_model/vgg19_dwt/vgg19_dwt.pt",
     "datadir": "/datasets",
     "savedir": "./results/CIFAR10/saved_model",
     "dataname": "CIFAR10",

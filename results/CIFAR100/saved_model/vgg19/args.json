@@ -6,6 +6,7 @@
     "savedir": "./results/CIFAR100/saved_model",
     "dataname": "CIFAR100",
     "num_classes": 100,
+    "dev_ratio": 0.1,
     "epochs": 200,
     "lr": 0.1,
     "batch_size": 128,

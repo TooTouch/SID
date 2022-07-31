@@ -6,6 +6,7 @@
     "savedir": "./results/SVHN/saved_model",
     "dataname": "SVHN",
     "num_classes": 10,
+    "dev_ratio": 0.1,
     "epochs": 200,
     "lr": 0.1,
     "batch_size": 128,

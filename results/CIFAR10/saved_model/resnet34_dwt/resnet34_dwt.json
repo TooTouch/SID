@@ -1,0 +1,5 @@
+{
+    "best_epoch": 275,
+    "best_dev_acc": 0.939,
+    "best_test_acc": 0.9309
+}
