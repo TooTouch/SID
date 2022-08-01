@@ -1,0 +1,7 @@
+{
+    "clean acc": 0.7618,
+    "noise acc": 0.4017,
+    "adv acc": 0.0354,
+    "clean dwt acc": 0.7091,
+    "adv dwt acc": 0.6966
+}
