@@ -207,6 +207,7 @@ def run(args):
     )
 
 if __name__=='__main__':
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp-name',type=str,help='experiment name')
     parser.add_argument('--modelname',type=str,choices=['vgg19','resnet34'])
