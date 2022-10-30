@@ -400,7 +400,7 @@ def test(model, dataloader, criterion, log_interval=-1, name='TEST', verbose=Tru
     # auroc
     results = get_auroc(outputs_total, targets_total)
     auroc = results['AUROC']
-    _logger.info('TEST [FIENAL]: Loss: %.3f | AUROC: %.3f | Acc: %.3f%% [%d/%d]' % 
+    _logger.info('TEST [FINAL]: Loss: %.3f | AUROC: %.3f | Acc: %.3f%% [%d/%d]' % 
                 (total_loss/(idx+1), auroc, 100.*correct/total, correct, total))
         
     return results
@@ -488,52 +488,55 @@ def run(args):
     savedir = os.path.join(args.savedir,args.exp_name)
     os.makedirs(savedir, exist_ok=True)
 
-    # save argsvars
-    json.dump(vars(args), open(os.path.join(savedir, 'args.json'), 'w'), indent=4)
+    if not os.path.isfile(os.path.join(savedir, 'result.json')):
+        # save argsvars
+        json.dump(vars(args), open(os.path.join(savedir, 'args.json'), 'w'), indent=4)
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-    _logger.info('Device: {}'.format(device))
-    
-    # Build Model
-    model = create_model(
-        modelname             = args.modelname, 
-        dataname              = args.dataname,
-        num_classes           = args.num_classes, 
-        use_wavelet_transform = False,
-        checkpoint            = args.model_checkpoint
-    ).to(device)
-    model.eval()
+        device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+        _logger.info('Device: {}'.format(device))
 
-    model_dwt = create_model(
-        modelname             = args.modelname, 
-        dataname              = args.dataname,
-        num_classes           = args.num_classes, 
-        use_wavelet_transform = True,
-        checkpoint            = args.model_dwt_checkpoint
-    ).to(device)
-    model_dwt.eval()
-    
-    detector = create_model(
-        modelname   = 'detector',
-        num_classes = 3,
-        logits_dim  = args.num_classes
-    ).to(device)
+        # Build Model
+        model = create_model(
+            modelname             = args.modelname, 
+            dataname              = args.dataname,
+            num_classes           = args.num_classes, 
+            use_wavelet_transform = False,
+            checkpoint            = args.model_checkpoint
+        ).to(device)
+        model.eval()
 
-    # validate
-    train_detector(
-        model            = model, 
-        model_dwt        = model_dwt, 
-        detector         = detector,
-        save_bucket_path = args.save_bucket_path, 
-        savedir          = savedir, 
-        epochs           = args.epochs, 
-        batch_size       = args.batch_size, 
-        train_ratio      = args.train_ratio, 
-        dev_ratio        = args.dev_ratio,
-        log_interval     = args.log_interval, 
-        seed             = args.seed, 
-        device           = device
-    )
+        model_dwt = create_model(
+            modelname             = args.modelname, 
+            dataname              = args.dataname,
+            num_classes           = args.num_classes, 
+            use_wavelet_transform = True,
+            checkpoint            = args.model_dwt_checkpoint
+        ).to(device)
+        model_dwt.eval()
+        
+        detector = create_model(
+            modelname   = 'detector',
+            num_classes = 3,
+            logits_dim  = args.num_classes
+        ).to(device)
+
+        # validate
+        train_detector(
+            model            = model, 
+            model_dwt        = model_dwt, 
+            detector         = detector,
+            save_bucket_path = args.save_bucket_path, 
+            savedir          = savedir, 
+            epochs           = args.epochs, 
+            batch_size       = args.batch_size, 
+            train_ratio      = args.train_ratio, 
+            dev_ratio        = args.dev_ratio,
+            log_interval     = args.log_interval, 
+            seed             = args.seed, 
+            device           = device
+        )
+    else:
+        _logger.info('Already result {} file exists'.format(args.exp_name))
 
 
 if __name__=='__main__':
