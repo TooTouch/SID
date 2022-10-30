@@ -1,6 +1,6 @@
 modelname_list="vgg19 resnet34"
-adv_method_list=("DeepFool" "BIM" "CW" "CW" "FAB" "FGSM" "PGD" "PGD" "PGD" "AutoAttack" "Square")
-adv_expname_list=("DeepFool" "BIM" "CW" "Low_CW" "FAB" "FGSM" "PGD" "Low_PGD1" "Low_PGD2" "AutoAttack" "Square")
+adv_method_list=("DeepFool" "BIM" "CW" "CW" "FAB" "FGSM" "PGD" "PGD" "PGD" "PGDL2" "AutoAttack" "Square")
+adv_expname_list=("DeepFool" "BIM" "CW" "Low_CW" "FAB" "FGSM" "PGD" "Low_PGD1" "Low_PGD2" "PGD_L2" "AutoAttack" "Square")
 dataname_list="CIFAR10 SVHN CIFAR100"
 
 for modelname in $modelname_list
@@ -8,7 +8,7 @@ do
     for dataname in $dataname_list
     do
         # 1. train classifier
-        # bash run_classifier.sh $modelname $dataname 
+        bash run_classifier.sh $modelname $dataname 
 
         # 2. make adversarial examples
         for i in ${!adv_method_list[*]}
