@@ -217,6 +217,8 @@ def run(args):
             log_interval = args.log_interval, 
             device       = device
         )
+    else:
+        _logger.info('Already result {} file exists'.format(args.exp_name))
 
 
 if __name__=='__main__':
